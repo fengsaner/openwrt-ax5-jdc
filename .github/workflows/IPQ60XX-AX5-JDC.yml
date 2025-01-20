@@ -115,7 +115,7 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
-
+        
     - name: Compile Firmware(开始编译固件)
       id: compile
       run: |
@@ -129,6 +129,14 @@ jobs:
     - name: Check Space Usage(检查空间使用情况)
       if: (!cancelled())
       run: df -hT
+
+    - name: Set NVRAM Flags (设置NVRAM标志)
+      run: |
+        nvram set flag_last_success=1
+        nvram set flag_boot_rootfs=1
+        nvram commit
+        current_rootfs=$(nvram get flag_boot_rootfs)
+        echo "当前启动的根文件系统: $current_rootfs"
 
     - name: Upload Bin Directory(上传固件)
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
@@ -147,7 +155,6 @@ jobs:
         tar -zcf Packages.tar.gz packages
         rm -rf packages feeds.buildinfo version.buildinfo
         echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
-
     - name: Upload Firmware To Artifact(将固件上传到Artifact)
       if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE != 'true'
       uses: actions/upload-artifact@main
